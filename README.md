@@ -1,5 +1,23 @@
-Ibexa DXP \<Package name\>
-====================
+# Ibexa TypeScript config
+
+## Installation and setup
+In order to use this config, add into `package.json` lines:
+```
+{
+    "devDependencies": {
+        "ts-config-ibexa": "https://github.com/ibexa/ts-config-ibexa"
+    }
+}
+```
+
+Add also `tsconfig.json` and paste into it:
+```
+{
+   "extends": "ts-config-ibexa/tsconfig.json",
+}
+```
+
+Inside bundle directory run `yarn install`. Everything is ready to use.
 
 ## COPYRIGHT
 Copyright (C) 1999-2024 Ibexa AS (formerly eZ Systems AS). All rights reserved.
