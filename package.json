@@ -1,7 +1,7 @@
 {
   "name": "ts-cofing-ibexa",
   "description": "Default Ibexa TypeScript configuration",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "keywords": [],
   "main": "./tsconfig.json",
   "browser": "./tsconfig.json",
