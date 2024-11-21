@@ -1,0 +1,13 @@
+{
+  "name": "ts-cofing-ibexa",
+  "description": "Default Ibexa TypeScript configuration",
+  "version": "1.0.0",
+  "keywords": [],
+  "main": "./tsconfig.json",
+  "browser": "./tsconfig.json",
+  "repository": "git://github.com/ibexa/ts-config-ibexa",
+  "license": "MIT",
+  "files": [
+    "tsconfig.json"
+  ]
+}
