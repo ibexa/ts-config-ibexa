@@ -11,5 +11,6 @@
     "skipLibCheck": true,
     "typeRoots": ["../../@types"]
   },
-  "include": ["/**/vendor/ibexa/**/*"]
+  "include": ["/**/vendor/ibexa/**/*"],
+  "exclude": ["/**/vendor/ibexa/*/vendor/**"]
 }
