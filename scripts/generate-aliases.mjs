@@ -17,12 +17,12 @@ const getArg = (argName) => {
     }
 
     return null;
-}
+};
 const getRelativePath = (basePath, targetPath) => {
     const relativePath = path.relative(basePath, targetPath);
 
     return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
-}
+};
 const getAliasesList = async () => {
     const cwd = process.cwd();
     const projectPath = getArg('--project-path') ?? cwd;
@@ -44,8 +44,6 @@ const getAliasesList = async () => {
                     const absoluteAliasPath = path.resolve(projectPath, relativeAliasPath);
                     const customRelativePath = getArg('--custom-relative-path');
 
-                    console.log(customRelativePath);
-
                     switch (relativeTo) {
                         case 'project':
                             aliasPath = getRelativePath(projectPath, absoluteAliasPath);
@@ -61,7 +59,7 @@ const getAliasesList = async () => {
                             break;
                         default:
                             aliasPath = absoluteAliasPath;
-                    };
+                    }
                 }
 
                 aliasesList[`${alias}/*`] = [`${aliasPath}/*`];
@@ -69,28 +67,28 @@ const getAliasesList = async () => {
         },
     };
 
-    console.log(configSetupFiles);
-    
-    await Promise.all(configSetupFiles.map(async (filePath) => {
-        const fullFilePath = path.resolve(projectPath, filePath);
-        const { default: setupMethod } = await import(fullFilePath);
-    
-        setupMethod(EncoreMockup);
-    
-        return Promise.resolve();
-    }));
+    await Promise.all(
+        configSetupFiles.map(async (filePath) => {
+            const fullFilePath = path.resolve(projectPath, filePath);
+            const { default: setupMethod } = await import(fullFilePath);
 
-    console.log('\x1b[32mGenerated aliases:\x1b[0m');
+            setupMethod(EncoreMockup);
+
+            return Promise.resolve();
+        }),
+    );
+
+    console.log('\x1b[32mGenerated aliases:\x1b[0m'); // eslint-disable-line no-console
 
     Object.entries(aliasesList).forEach(([alias, [aliasFullPath]]) => {
         const aliasName = alias.replace('/*', '');
         const aliasPath = aliasFullPath.replace('/*', '');
 
-        console.log(`\x1b[32m  ${aliasName} -> ${aliasPath}\x1b[0m`);
+        console.log(`\x1b[32m  ${aliasName} -> ${aliasPath}\x1b[0m`); // eslint-disable-line no-console
     });
 
     return aliasesList;
-}
+};
 
 const projectPath = getArg('--project-path') ?? process.cwd();
 const tsConfigFilename = getArg('--tsconfig-filename') ?? 'tsconfig.json';
@@ -110,4 +108,4 @@ tsconfigContent.compilerOptions.paths = await getAliasesList();
 
 fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfigContent, null, 4));
 
-console.log(`\n\x1b[32mUpdated ${tsConfigFilename} with aliases.\x1b[0m`);
+console.log(`\n\x1b[32mUpdated ${tsConfigFilename} with aliases.\x1b[0m`); // eslint-disable-line no-console
