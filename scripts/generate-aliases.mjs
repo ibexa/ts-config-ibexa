@@ -38,7 +38,7 @@ const getAliasesList = async () => {
                 if (isDesignSystemAlias(alias) && designSystemPath) {
                     const designSystemPackageName = alias.replace('@ds-', '');
 
-                    aliasPath = path.resolve(designSystemPath, 'packages', designSystemPackageName, 'dist');
+                    aliasPath = path.resolve(designSystemPath, 'packages', designSystemPackageName, 'src');
                 } else {
                     const relativeAliasPath = path.relative(cwd, aliasFullPath);
                     const absoluteAliasPath = path.resolve(projectPath, relativeAliasPath);
