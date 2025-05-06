@@ -29,7 +29,7 @@ const getAliasesList = async () => {
     const designSystemPath = getArg('--design-system-path');
     const relativeTo = getArg('--relative-to');
     const configSetupFiles = fs.globSync('./vendor/ibexa/**/encore/ibexa.config.setup.js', { cwd: projectPath });
-    const aliasesList = {};
+    const aliasesListUnsorted = {};
     const EncoreMockup = {
         addAliases: (aliases) => {
             Object.entries(aliases).forEach(([alias, aliasFullPath]) => {
@@ -62,7 +62,7 @@ const getAliasesList = async () => {
                     }
                 }
 
-                aliasesList[`${alias}/*`] = [`${aliasPath}/*`];
+                aliasesListUnsorted[`${alias}/*`] = [`${aliasPath}/*`];
             });
         },
     };
@@ -77,6 +77,13 @@ const getAliasesList = async () => {
             return Promise.resolve();
         }),
     );
+
+    const aliasesListKeys = Object.keys(aliasesListUnsorted).toSorted();
+    const aliasesList = {};
+
+    aliasesListKeys.forEach((aliasKey) => {
+        aliasesList[aliasKey] = aliasesListUnsorted[aliasKey];
+    });
 
     console.log('\x1b[32mGenerated aliases:\x1b[0m'); // eslint-disable-line no-console
 
