@@ -7,12 +7,12 @@
   "browser": "./tsconfig.json",
   "repository": "git://github.com/ibexa/ts-config-ibexa",
   "license": "MIT",
-  "prettier": "eslint-config-ibexa/prettier",
+  "prettier": "@ibexa/eslint-config/prettier",
   "files": [
     "tsconfig.json"
   ],
   "devDependencies": {
-    "eslint-config-ibexa": "https://github.com/ibexa/eslint-config-ibexa.git#v2"
+    "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0"
   },
   "scripts": {
     "test": "yarn prettier-test && yarn eslint-test",

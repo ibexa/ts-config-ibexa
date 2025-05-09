@@ -1,3 +1,3 @@
-import ibexaConfig from 'eslint-config-ibexa/eslint';
+import getIbexaConfig from '@ibexa/eslint-config/eslint';
 
-export default ibexaConfig;
+export default getIbexaConfig({ react: false, ts: false });
