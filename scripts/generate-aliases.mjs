@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import process from 'process';
 
-const isDesignSystemAlias = (alias) => alias === '@ds-assets' || alias === '@ds-components';
+const isDesignSystemAlias = (alias) => alias === '@ids-assets' || alias === '@ids-components';
 const getArg = (argName) => {
     const noValueArgExists = process.argv.includes(argName);
 
@@ -36,7 +36,7 @@ const getAliasesList = async () => {
                 let aliasPath;
 
                 if (isDesignSystemAlias(alias) && designSystemPath) {
-                    const designSystemPackageName = alias.replace('@ds-', '');
+                    const designSystemPackageName = alias.replace('@ids-', '');
 
                     aliasPath = path.resolve(designSystemPath, 'packages', designSystemPackageName, 'src');
                 } else {
