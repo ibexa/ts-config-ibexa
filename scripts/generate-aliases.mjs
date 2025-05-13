@@ -4,19 +4,13 @@ import process from 'process';
 
 const isDesignSystemAlias = (alias) => alias === '@ids-assets' || alias === '@ids-components';
 const getArg = (argName) => {
-    const noValueArgExists = process.argv.includes(argName);
-
-    if (noValueArgExists) {
-        return true;
-    }
-
     const argIndex = process.argv.findIndex((arg) => arg.indexOf(`${argName}=`) === 0);
 
     if (argIndex >= 2) {
         return process.argv[argIndex].replace(`${argName}=`, '');
     }
 
-    return null;
+    return undefined;
 };
 const getRelativePath = (basePath, targetPath) => {
     const relativePath = path.relative(basePath, targetPath);
