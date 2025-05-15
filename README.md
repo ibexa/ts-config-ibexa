@@ -1,5 +1,23 @@
-Ibexa DXP \<Package name\>
-====================
+Ibexa TypeScript Config
+
+## Generating aliases for project repository
+From project repository run with optional arguments:
+```node node_modules/@ibexa/ts-config/scripts/generate-aliases.mjs```
+
+### Available arguments
+`--project-path` - if run from other place than DXP installation or bundle with installed vendors
+`--design-system-path` - absolute path to Design System repository, only needed in dev environment if you're working on DS components
+`--tsconfig-filename` - allows to generate aliases to file different than `tsconfig.json`
+`--relative-to` - required, has three options:
+
+#### project
+Creates aliases relative to project directory (`cwd` or `--project-path`)
+
+#### bundle
+Creates aliases relative to current bundle directory (like `vendor/ibexa/admin-ui`)
+
+#### custom
+Used with `--custom-relative-path` argument, it creates aliases relative to path from this argument
 
 ## COPYRIGHT
 Copyright (C) 1999-2025 Ibexa AS (formerly eZ Systems AS). All rights reserved.
