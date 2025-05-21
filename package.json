@@ -17,14 +17,14 @@
   "devDependencies": {
     "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0"
   },
+  "dependencies": {
+    "glob": "^11.0.2"
+  },
   "scripts": {
     "test": "yarn prettier-test && yarn eslint-test",
     "fix": "yarn prettier-test --write && yarn eslint-test --fix",
     "eslint-test": "eslint \"./scripts/*.mjs\"",
     "prettier-test": "yarn prettier \"./scripts/*.mjs\" --check"
   },
-  "packageManager": "yarn@1.22.22",
-  "dependencies": {
-    "glob": "^11.0.2"
-  }
+  "packageManager": "yarn@1.22.22"
 }
