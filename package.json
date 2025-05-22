@@ -8,11 +8,17 @@
   "repository": "git://github.com/ibexa/ts-config-ibexa",
   "license": "MIT",
   "prettier": "@ibexa/eslint-config/prettier",
+  "bin": {
+    "ibexa-generate-tsconfig": "./bin/generate.tsconfig.mjs"
+  },
   "files": [
     "tsconfig.json"
   ],
   "devDependencies": {
     "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0"
+  },
+  "dependencies": {
+    "glob": "^11.0.2"
   },
   "scripts": {
     "test": "yarn prettier-test && yarn eslint-test",
