@@ -100,6 +100,6 @@ const aliasesListMerged = mergeAliases(encoreAliasesList, ibexaConfigContent.com
 updatePathsConfig(ibexaConfigContent, aliasesListMerged);
 sortConfigAliases(ibexaConfigContent);
 
-ibexaConfigContent = updateCustomConfig(ibexaConfigContent);
+ibexaConfigContent = await updateCustomConfig(ibexaConfigContent);
 
 saveConfigFileContent('tsconfig.json', ibexaConfigContent);
