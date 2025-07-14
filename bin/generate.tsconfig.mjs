@@ -4,6 +4,7 @@ import path from 'path';
 import { globSync } from 'glob';
 
 const useRootProjectTSConfig = process.argv.includes('--use-root-project-tsconfig') || process.env.USE_ROOT_PROJECT_TSCONFIG === 'true';
+const useRelativePaths = process.argv.includes('--use-relative-paths');
 const configSetupsAggregatorFilePath = './var/encore/ibexa.config.setup.js';
 const configSetupsAggregatorFullFilePath = path.resolve(configSetupsAggregatorFilePath);
 const customConfigFilePath = './custom.tsconfig.mjs';
@@ -31,7 +32,13 @@ const getEncoreAliases = (setupMethods) => {
     const EncoreMockup = {
         addAliases: (aliases) => {
             Object.entries(aliases).forEach(([alias, aliasFullPath]) => {
-                listUnsorted[`${alias}/*`] = [`${aliasFullPath}/*`];
+                if (useRelativePaths) {
+                    const relativeAliasPath = path.relative(process.cwd(), aliasFullPath);
+
+                    listUnsorted[`${alias}/*`] = [`./${relativeAliasPath}/*`];
+                } else {
+                    listUnsorted[`${alias}/*`] = [`${aliasFullPath}/*`];
+                }
             });
         },
     };
