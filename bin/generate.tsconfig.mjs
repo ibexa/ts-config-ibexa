@@ -36,8 +36,10 @@ const getEncoreAliases = (setupMethods) => {
                     const relativeAliasPath = path.relative(process.cwd(), aliasFullPath);
 
                     listUnsorted[`${alias}/*`] = [`./${relativeAliasPath}/*`];
+                    listUnsorted[alias] = [`./${relativeAliasPath}/index`];
                 } else {
                     listUnsorted[`${alias}/*`] = [`${aliasFullPath}/*`];
+                    listUnsorted[alias] = [`${aliasFullPath}/index`];
                 }
             });
         },
