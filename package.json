@@ -12,7 +12,8 @@
     "ibexa-generate-tsconfig": "./bin/generate.tsconfig.mjs"
   },
   "files": [
-    "tsconfig.json"
+    "tsconfig.json",
+    "bin"
   ],
   "devDependencies": {
     "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0"
