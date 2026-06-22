@@ -120,7 +120,7 @@ const findRootProjectTSConfigPath = () => {
     let currentDir = process.cwd();
 
     while (currentDir !== '/') {
-        const webpackConfigPath = path.join(currentDir, 'ibexa.webpack.config.js');
+        const webpackConfigPath = path.join(currentDir, 'webpack.config.js');
         const tsConfigPath = path.join(currentDir, 'tsconfig.json');
 
         if (fs.existsSync(webpackConfigPath) && fs.existsSync(tsConfigPath)) {
