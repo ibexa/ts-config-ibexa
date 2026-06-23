@@ -8,11 +8,25 @@
   "repository": "git://github.com/ibexa/ts-config-ibexa",
   "license": "MIT",
   "prettier": "@ibexa/eslint-config/prettier",
+  "exports": {
+    ".": "./tsconfig.json",
+    "./utils": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tsconfig.json": "./tsconfig.json"
+  },
+  "typesVersions": {
+    "*": {
+      "utils": ["./src/index.ts"]
+    }
+  },
   "bin": {
     "ibexa-generate-tsconfig": "./bin/generate.tsconfig.mjs"
   },
   "files": [
-    "tsconfig.json"
+    "tsconfig.json",
+    "src"
   ],
   "devDependencies": {
     "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0"

@@ -13,5 +13,8 @@
             "../../@types"
         ],
         "paths": {}
-    }
+    },
+    "files": [
+        "types/globals.d.ts"
+    ]
 }
