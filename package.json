@@ -10,15 +10,14 @@
   "prettier": "@ibexa/eslint-config/prettier",
   "exports": {
     ".": "./tsconfig.json",
-    "./utils": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./tsconfig.json": "./tsconfig.json"
+    "./tsconfig.json": "./tsconfig.json",
+    "./schema": "./types/schema.d.ts"
   },
   "typesVersions": {
     "*": {
-      "utils": ["./src/index.ts"]
+      "schema": [
+        "./types/schema.d.ts"
+      ]
     }
   },
   "bin": {
@@ -26,10 +25,13 @@
   },
   "files": [
     "tsconfig.json",
-    "src"
+    "src",
+    "types"
   ],
   "devDependencies": {
-    "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0"
+    "@ibexa/eslint-config": "https://github.com/ibexa/eslint-config-ibexa.git#~v2.0.0",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "glob": "^11.0.2"

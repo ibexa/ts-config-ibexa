@@ -19,6 +19,15 @@ Creates aliases relative to current bundle directory (like `vendor/ibexa/admin-u
 #### custom
 Used with `--custom-relative-path` argument, it creates aliases relative to path from this argument
 
+## Generating API schema for TS
+Download openapi.yaml
+```wget https://raw.githubusercontent.com/ibexa/documentation-developer/refs/heads/5.0/docs/api/rest_api/rest_api_reference/openapi.yaml```
+
+Due to current bug in openapi file parts of file that starts with `$ref: '#/components/examples` needs to be removed before generating .d.ts file.
+
+Generate schema.d.ts file:
+```npx openapi-typescript ./openapi.yaml -o ./types/schema.d.ts```
+
 ## COPYRIGHT
 Copyright (C) 1999-2025 Ibexa AS (formerly eZ Systems AS). All rights reserved.
 
