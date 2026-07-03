@@ -1,3 +1,5 @@
+import type { Translator } from './translator';
+
 declare global {
     interface Window {
         bootstrap: typeof import('bootstrap');
@@ -10,8 +12,8 @@ declare global {
         moment: typeof import('moment');
         Popper: typeof import('@popperjs/core');
         ReactDOMClient: typeof import('react-dom/client');
-        Routing: any;
-        Translator: any;
+        Routing: typeof import('./router').default;
+        Translator: Translator;
     }
 }
 
