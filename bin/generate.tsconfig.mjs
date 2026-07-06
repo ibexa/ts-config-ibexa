@@ -2,11 +2,11 @@
 import TSConfigIbexaGenerator from '../src/TSConfigIbexaGenerator.mjs';
 
 const useRelativePaths = process.argv.includes('--use-relative-paths');
-const configSetupsAggregatorFilePath = './var/encore/ibexa.config.setup.js';
+const projectRootDir = process.argv.find(arg => arg.startsWith('--project-root-dir='))?.split('=')[1];
 
 const TSConfigIbexaGeneratorInstance = new TSConfigIbexaGenerator({
     useRelativePaths,
-    configSetupsAggregatorFilePath,
+    projectRootDir,
 });
 
 if (!TSConfigIbexaGeneratorInstance.isInComposerDirectory()) {

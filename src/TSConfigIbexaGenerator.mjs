@@ -7,25 +7,43 @@ import GeneratedFilesCache from './GeneratedFilesCache.mjs';
 
 export default class TSConfigIbexaGenerator {
     static IBEXA_TSCONFIG_FILENAME = 'tsconfig.ibexa.json';
+    static CONFIG_SETUPS_AGGREGATOR_FILE_PATH = './var/encore/ibexa.config.setup.js';
 
     constructor({
         useRelativePaths,
-        configSetupsAggregatorFilePath,
+        projectRootDir,
     }) {
         this.useRelativePaths = useRelativePaths;
-        this.configSetupsAggregatorFilePath = configSetupsAggregatorFilePath;
-        this.configSetupsAggregatorFullFilePath = path.resolve(configSetupsAggregatorFilePath);
-        this.rootDir = TSConfigIbexaGenerator.getRootDir();
+        this.rootDir = projectRootDir ?? TSConfigIbexaGenerator.getRootDir();
         this.generatedFilesCache = new GeneratedFilesCache();
+
+        if (projectRootDir && TSConfigIbexaGenerator.checkIsProjectRootDirValid(projectRootDir)) {
+            this.rootDir = projectRootDir;
+        } else {
+            if (projectRootDir) {
+                console.warn(
+                    '\x1b[33m%s\x1b[0m',
+                    `Warning: The provided project root directory "${projectRootDir}" is not valid. Falling back to the current working directory.`,
+                );
+            }
+
+            this.rootDir = TSConfigIbexaGenerator.getRootDir();
+        }
+    }
+
+    static checkIsProjectRootDirValid = (rootDir) => {
+        const webpackConfigPath = path.join(rootDir, 'webpack.config.js');
+
+        return fs.existsSync(webpackConfigPath);
     }
 
     static getRootDir = () => {
         let currentDir = process.cwd();
 
         while (currentDir !== path.parse(currentDir).root) {
-            const webpackConfigPath = path.join(currentDir, 'webpack.config.js');
+            const isCurrentDirValid = TSConfigIbexaGenerator.checkIsProjectRootDirValid(currentDir);
 
-            if (fs.existsSync(webpackConfigPath)) {
+            if (isCurrentDirValid) {
                 return currentDir;
             }
 
@@ -131,15 +149,15 @@ export default class TSConfigIbexaGenerator {
 
     getEncoreAliasSetupMethods = () => {
         return new Promise((resolve) => {
-            if (fs.existsSync(this.configSetupsAggregatorFullFilePath)) {
-                resolve(TSConfigIbexaGenerator.getDefaultImportFromFile(this.configSetupsAggregatorFilePath));
+            if (fs.existsSync(path.resolve(TSConfigIbexaGenerator.CONFIG_SETUPS_AGGREGATOR_FILE_PATH))) {
+                resolve(TSConfigIbexaGenerator.getDefaultImportFromFile(TSConfigIbexaGenerator.CONFIG_SETUPS_AGGREGATOR_FILE_PATH));
 
                 return;
             }
 
             console.warn(
                 '\x1b[33m%s\x1b[0m',
-                `No ${this.configSetupsAggregatorFilePath} file found. Searching for all encore config setup files in ibexa bundles...`,
+                `No ${TSConfigIbexaGenerator.CONFIG_SETUPS_AGGREGATOR_FILE_PATH} file found. Searching for all encore config setup files in ibexa bundles...`,
             );
 
             return resolve(globSync(this.getIbexaVendorPath('**/encore/ibexa.config.setup.js', true)));
