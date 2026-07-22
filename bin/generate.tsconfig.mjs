@@ -1,12 +1,18 @@
 #!/usr/bin/env node
+import { parseArgs } from 'node:util';
+
 import TSConfigIbexaGenerator from '../src/TSConfigIbexaGenerator.mjs';
 
-const useRelativePaths = process.argv.includes('--use-relative-paths');
-const projectRootDir = process.argv.find(arg => arg.startsWith('--project-root-dir='))?.split('=')[1];
+const { values } = parseArgs({
+    options: {
+        'use-relative-paths': { type: 'boolean' },
+        'project-root-dir': { type: 'string' },
+    },
+});
 
 const TSConfigIbexaGeneratorInstance = new TSConfigIbexaGenerator({
-    useRelativePaths,
-    projectRootDir,
+    useRelativePaths: values['use-relative-paths'],
+    projectRootDir: values['project-root-dir'],
 });
 
 if (!TSConfigIbexaGeneratorInstance.isInComposerDirectory()) {
