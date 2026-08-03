@@ -1,1 +1,0 @@
-export { isTypedObject } from './isTypedObject';
