@@ -239,11 +239,14 @@ export default class TSConfigIbexaGenerator {
         ]
     }
 
+    getGlobalTypesPath = () => this.getPath(this.getIbexaVendorPath('*/src/bundle/Resources/types/**/*.d.ts', true));
+
     generateBundleTSConfigContent = async () => {
         const configFileContent = {
             include: [
                 'src/bundle/**/*.ts',
                 'src/bundle/**/*.tsx',
+                this.getGlobalTypesPath(),
             ],
         };
 
