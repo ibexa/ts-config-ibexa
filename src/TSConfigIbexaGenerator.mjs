@@ -13,10 +13,8 @@ export default class TSConfigIbexaGenerator {
     constructor({
         useRelativePaths,
         projectRootDir,
-        updateTypeDependencies,
     }) {
         this.useRelativePaths = useRelativePaths;
-        this.updateTypeDependencies = updateTypeDependencies;
         this.rootDir = projectRootDir ?? TSConfigIbexaGenerator.getRootDir();
         this.generatedFilesCache = new GeneratedFilesCache();
 
@@ -89,7 +87,6 @@ export default class TSConfigIbexaGenerator {
         const installer = new TypeDependenciesInstaller({
             rootDir: this.rootDir,
             getIbexaVendorPath: this.getIbexaVendorPath,
-            update: this.updateTypeDependencies,
         });
 
         installer.run();

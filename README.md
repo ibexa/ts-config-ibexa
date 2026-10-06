@@ -28,11 +28,9 @@ When the generator runs in a standalone bundle checkout it makes sure both are a
 - `ibexa/admin-ui-assets` for every bundle,
 - `ibexa/headless-assets` for every bundle with `"license": "proprietary"` in its `composer.json`.
 
-The version is `dev-X.Y-next`, with `X.Y` taken from the bundle's `extra.branch-alias`. The packages are installed with Composer into a project of their own under the user cache directory (`$XDG_CACHE_HOME/ibexa-ts-config`, `~/.cache/ibexa-ts-config`, `~/Library/Caches/ibexa-ts-config` or `%LOCALAPPDATA%\ibexa-ts-config\Cache`) and symlinked into `vendor/ibexa/`. The bundle's `composer.json` and `composer.lock` are not touched. The side project reuses the bundle's `repositories` and its `auth.json` when there is one, so the same credentials work as for `composer install`. A package already present in `vendor/` is left alone, and a dangling symlink (for example after the cache was removed) is installed again on the next run.
+The version is `dev-X.Y-next`, with `X.Y` taken from the bundle's `extra.branch-alias`. Each package is installed with Composer into a project of its own under `node_modules/.cache/ibexa-ts-config/packages/` and symlinked into `vendor/ibexa/`. The bundle's `composer.json` and `composer.lock` are not touched. The side project reuses the bundle's `repositories` and its `auth.json` when there is one, so the same credentials work as for `composer install`.
 
-To refresh the cached packages (the `-next` branches move on):
-
-```yarn ibexa-generate-tsconfig --update-type-dependencies```
+Every run refreshes the side projects with `composer update`, so `yarn install` always leaves the assets at the current state of their `-next` branch, the same way `composer install` without a lock file does for the bundle's own dependencies. When nothing changed this costs about a second per package. A real package directory or a symlink made by something else in `vendor/ibexa/` is left alone. Removing `node_modules` removes the installed assets as well; the next `yarn install` brings them back.
 
 ## Generating API schema for TS
 Download openapi.yaml
