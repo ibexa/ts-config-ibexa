@@ -4,7 +4,6 @@ import { globSync } from 'glob';
 import { execSync } from 'child_process';
 
 import GeneratedFilesCache from './GeneratedFilesCache.mjs';
-import TypeDependenciesInstaller from './TypeDependenciesInstaller.mjs';
 
 export default class TSConfigIbexaGenerator {
     static IBEXA_TSCONFIG_FILENAME = 'tsconfig.ibexa.json';
@@ -65,11 +64,21 @@ export default class TSConfigIbexaGenerator {
         return fs.existsSync(composerFilePath);
     }
 
-    static runComposerCommand = (command) => {
+    static runComposerCommand = (command, cwd = process.cwd()) => {
         try {
-            execSync(command, { stdio: 'ignore' });
+            execSync(command, { cwd, stdio: ['ignore', 'ignore', 'pipe'] });
         } catch (error) {
-            throw new Error(`Failed to run "${command}". Make sure Composer is installed and available in your PATH.\n${error.message}`);
+            const stderr = error.stderr?.toString().trim();
+
+            throw new Error(`Failed to run "${command}" in "${cwd}". Make sure Composer is installed and available in your PATH.\n${stderr || error.message}`);
+        }
+    }
+
+    static isSymlink = (filePath) => {
+        try {
+            return fs.lstatSync(filePath).isSymbolicLink();
+        } catch {
+            return false;
         }
     }
 
@@ -84,12 +93,86 @@ export default class TSConfigIbexaGenerator {
             TSConfigIbexaGenerator.runComposerCommand('composer install');
         }
 
-        const installer = new TypeDependenciesInstaller({
-            rootDir: this.rootDir,
-            getIbexaVendorPath: this.getIbexaVendorPath,
-        });
+        this.installAssetsPackages();
+    }
 
-        installer.run();
+    getAssetsPackagesDir = () => path.join(GeneratedFilesCache.findNodeModulesDir(), '.cache', 'ibexa-ts-config', 'packages');
+
+    isForeignVendorPath = (vendorPath) => {
+        if (!fs.existsSync(vendorPath)) {
+            return false;
+        }
+
+        if (!TSConfigIbexaGenerator.isSymlink(vendorPath)) {
+            return true;
+        }
+
+        return !fs.realpathSync(vendorPath).startsWith(this.getAssetsPackagesDir());
+    }
+
+    installAssetsPackage = (name, constraint, repositories) => {
+        const projectDir = path.join(this.getAssetsPackagesDir(), `${name.replace('/', '_')}@${constraint}`);
+        const installedDir = path.join(projectDir, 'vendor', name);
+        const authFilePath = path.join(this.rootDir, 'auth.json');
+
+        if (!fs.existsSync(path.join(installedDir, 'composer.json'))) {
+            // eslint-disable-next-line no-console
+            console.log('\x1b[33m%s\x1b[0m', `Installing ${name} (${constraint}) in ${projectDir}...`);
+        }
+
+        fs.mkdirSync(projectDir, { recursive: true });
+        fs.writeFileSync(path.join(projectDir, 'composer.json'), JSON.stringify({ repositories, require: { [name]: constraint } }, null, 4));
+
+        if (fs.existsSync(authFilePath)) {
+            fs.copyFileSync(authFilePath, path.join(projectDir, 'auth.json'));
+        }
+
+        TSConfigIbexaGenerator.runComposerCommand('composer update --no-interaction --no-plugins --no-scripts', projectDir);
+
+        return installedDir;
+    }
+
+    linkAssetsPackage = (linkPath, targetDir) => {
+        if (TSConfigIbexaGenerator.isSymlink(linkPath)) {
+            if (fs.existsSync(linkPath) && fs.realpathSync(linkPath) === fs.realpathSync(targetDir)) {
+                return;
+            }
+
+            fs.unlinkSync(linkPath);
+        }
+
+        fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+        fs.symlinkSync(targetDir, linkPath, 'junction');
+
+        // eslint-disable-next-line no-console
+        console.log('\x1b[32m%s\x1b[0m', `Linked ${linkPath} -> ${targetDir}`);
+    }
+
+    installAssetsPackages = () => {
+        const composerContent = JSON.parse(fs.readFileSync(path.join(this.rootDir, 'composer.json'), 'utf-8'));
+        const versionLine = /^(\d+\.\d+)\.x-dev$/.exec(composerContent.extra?.['branch-alias']?.['dev-main'] ?? '')?.[1];
+        const repositories = (composerContent.repositories ?? []).filter((repository) => repository.type !== 'path');
+        const packages = ['ibexa/admin-ui-assets'];
+
+        if (composerContent.license === 'proprietary') {
+            packages.push('ibexa/headless-assets');
+        }
+
+        if (!versionLine) {
+            console.warn('\x1b[33m%s\x1b[0m', 'No "X.Y.x-dev" branch alias found in composer.json. Skipping the assets packages.');
+
+            return;
+        }
+
+        packages.forEach((name) => {
+            const vendorPath = this.getIbexaVendorPath(name.replace('ibexa/', ''), true);
+
+            if (name === composerContent.name || this.isForeignVendorPath(vendorPath)) {
+                return;
+            }
+
+            this.linkAssetsPackage(vendorPath, this.installAssetsPackage(name, `dev-${versionLine}-next`, repositories));
+        });
     }
 
     getIbexaVendorPath = (filename, fullPath = false) => {
