@@ -4,6 +4,7 @@ import { globSync } from 'glob';
 import { execSync } from 'child_process';
 
 import GeneratedFilesCache from './GeneratedFilesCache.mjs';
+import TypeDependenciesInstaller from './TypeDependenciesInstaller.mjs';
 
 export default class TSConfigIbexaGenerator {
     static IBEXA_TSCONFIG_FILENAME = 'tsconfig.ibexa.json';
@@ -12,8 +13,10 @@ export default class TSConfigIbexaGenerator {
     constructor({
         useRelativePaths,
         projectRootDir,
+        updateTypeDependencies,
     }) {
         this.useRelativePaths = useRelativePaths;
+        this.updateTypeDependencies = updateTypeDependencies;
         this.rootDir = projectRootDir ?? TSConfigIbexaGenerator.getRootDir();
         this.generatedFilesCache = new GeneratedFilesCache();
 
@@ -91,6 +94,20 @@ export default class TSConfigIbexaGenerator {
             // eslint-disable-next-line no-console
             console.log('\x1b[32m%s\x1b[0m', 'Dependencies installed successfully.');
         }
+
+        if (this.isBundleContext() && this.isStandaloneContext()) {
+            this.installTypeDependencies();
+        }
+    }
+
+    installTypeDependencies = () => {
+        const installer = new TypeDependenciesInstaller({
+            rootDir: this.rootDir,
+            getIbexaVendorPath: this.getIbexaVendorPath,
+            update: this.updateTypeDependencies,
+        });
+
+        installer.run();
     }
 
     getIbexaVendorPath = (filename, fullPath = false) => {
@@ -160,7 +177,7 @@ export default class TSConfigIbexaGenerator {
                 `No ${TSConfigIbexaGenerator.CONFIG_SETUPS_AGGREGATOR_FILE_PATH} file found. Searching for all encore config setup files in ibexa bundles...`,
             );
 
-            return resolve(globSync(this.getIbexaVendorPath('**/encore/ibexa.config.setup.js', true)));
+            return resolve(globSync(this.getIbexaVendorPath('**/encore/ibexa.config.setup.js', true), { follow: true }));
         }).then((configSetupFiles) => Promise.all(
             configSetupFiles.map(TSConfigIbexaGenerator.getDefaultImportFromFile),
         ));

@@ -7,12 +7,14 @@ const { values } = parseArgs({
     options: {
         'use-relative-paths': { type: 'boolean' },
         'project-root-dir': { type: 'string' },
+        'update-type-dependencies': { type: 'boolean' },
     },
 });
 
 const TSConfigIbexaGeneratorInstance = new TSConfigIbexaGenerator({
     useRelativePaths: values['use-relative-paths'],
     projectRootDir: values['project-root-dir'],
+    updateTypeDependencies: values['update-type-dependencies'],
 });
 
 if (!TSConfigIbexaGeneratorInstance.isInComposerDirectory()) {
