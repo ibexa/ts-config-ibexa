@@ -242,7 +242,7 @@ export default class TSConfigIbexaGenerator {
                 `No ${TSConfigIbexaGenerator.CONFIG_SETUPS_AGGREGATOR_FILE_PATH} file found. Searching for all encore config setup files in ibexa bundles...`,
             );
 
-            return resolve(globSync(this.getIbexaVendorPath('**/encore/ibexa.config.setup.js', true), { follow: true }));
+            return resolve(globSync(this.getIbexaVendorPath('*/src/bundle/Resources/encore/ibexa.config.setup.js', true)));
         }).then((configSetupFiles) => Promise.all(
             configSetupFiles.map(TSConfigIbexaGenerator.getDefaultImportFromFile),
         ));
