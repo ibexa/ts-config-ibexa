@@ -114,8 +114,9 @@ export default class TSConfigIbexaGenerator {
         const projectDir = path.join(this.getAssetsPackagesDir(), `${name.replace('/', '_')}@${constraint}`);
         const installedDir = path.join(projectDir, 'vendor', name);
         const authFilePath = path.join(this.rootDir, 'auth.json');
+        const isInstalled = fs.existsSync(path.join(installedDir, 'composer.json'));
 
-        if (!fs.existsSync(path.join(installedDir, 'composer.json'))) {
+        if (!isInstalled) {
             // eslint-disable-next-line no-console
             console.log('\x1b[33m%s\x1b[0m', `Installing ${name} (${constraint}) in ${projectDir}...`);
         }
@@ -127,7 +128,15 @@ export default class TSConfigIbexaGenerator {
             fs.copyFileSync(authFilePath, path.join(projectDir, 'auth.json'));
         }
 
-        TSConfigIbexaGenerator.runComposerCommand('composer update --no-interaction --no-plugins --no-scripts', projectDir);
+        try {
+            TSConfigIbexaGenerator.runComposerCommand('composer update --no-interaction --no-plugins --no-scripts', projectDir);
+        } catch (error) {
+            if (!isInstalled) {
+                throw error;
+            }
+
+            console.warn('\x1b[33m%s\x1b[0m', `Could not refresh ${name}, using the version installed before.\n${error.message}`);
+        }
 
         return installedDir;
     }
