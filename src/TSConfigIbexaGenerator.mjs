@@ -91,6 +91,13 @@ export default class TSConfigIbexaGenerator {
     installAssetsPackages = () => {
         const composerContent = JSON.parse(fs.readFileSync(path.join(this.rootDir, 'composer.json'), 'utf-8'));
         const versionLine = /^(\d+\.\d+)\.x-dev$/.exec(composerContent.extra?.['branch-alias']?.['dev-main'] ?? '')?.[1];
+
+        if (!versionLine) {
+            console.warn('\x1b[33m%s\x1b[0m', 'No "X.Y.x-dev" branch alias found in composer.json. Skipping the assets packages.');
+
+            return;
+        }
+
         const cacheDir = path.join(this.rootDir, 'node_modules', '.cache', 'ibexa-ts-config');
         const projectDir = path.join(cacheDir, 'assets');
         const getVendorPath = (name) => this.getIbexaVendorPath(name.replace('ibexa/', ''), true);
@@ -98,12 +105,6 @@ export default class TSConfigIbexaGenerator {
         const packages = ['ibexa/admin-ui-assets', ...(composerContent.license === 'proprietary' ? ['ibexa/headless-assets'] : [])].filter(
             (name) => name !== composerContent.name && isManaged(getVendorPath(name)),
         );
-
-        if (!versionLine) {
-            console.warn('\x1b[33m%s\x1b[0m', 'No "X.Y.x-dev" branch alias found in composer.json. Skipping the assets packages.');
-
-            return;
-        }
 
         if (packages.length === 0) {
             return;
@@ -135,6 +136,8 @@ export default class TSConfigIbexaGenerator {
 
         if (fs.existsSync(authFilePath)) {
             fs.copyFileSync(authFilePath, path.join(projectDir, 'auth.json'));
+        } else {
+            fs.rmSync(path.join(projectDir, 'auth.json'), { force: true });
         }
 
         try {
