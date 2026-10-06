@@ -19,29 +19,18 @@ Creates aliases relative to current bundle directory (like `vendor/ibexa/admin-u
 #### custom
 Used with `--custom-relative-path` argument, it creates aliases relative to path from this argument
 
-## Type dependencies of other bundles
+## Assets packages in a standalone bundle
 
-A bundle's `src/bundle/Resources/types/*.d.ts` can reference TypeScript sources that import packages the bundle only has in `require-dev`, for example `@ibexa/types` shipped by `ibexa/headless-assets`. A standalone checkout of another bundle that pulls in that bundle then fails `tsc` with `Cannot find module`, because the package is missing from its `vendor/`.
+The global declarations of the Ibexa bundles reach into sources that import the npm packages shipped by `ibexa/admin-ui-assets` and `ibexa/headless-assets` (for example `@ibexa/types` and `@ibexa/utils` used by page-builder). A standalone bundle checkout usually has neither in its `vendor/`, so `tsc` fails with `Cannot find module`.
 
-Such a bundle declares the packages its declarations need in its own `composer.json`:
+When the generator runs in a standalone bundle checkout it makes sure both are available:
 
-```json
-"extra": {
-    "ibexa": {
-        "ts-config": {
-            "require": {
-                "ibexa/headless-assets": "dev-6.0-next"
-            }
-        }
-    }
-}
-```
+- `ibexa/admin-ui-assets` for every bundle,
+- `ibexa/headless-assets` for every bundle with `"license": "proprietary"` in its `composer.json`.
 
-When the generator runs in a standalone bundle checkout it reads these entries from every package in `vendor/ibexa/`, installs the missing ones with Composer into a project of their own under the user cache directory (`$XDG_CACHE_HOME/ibexa-ts-config`, `~/.cache/ibexa-ts-config`, `~/Library/Caches/ibexa-ts-config` or `%LOCALAPPDATA%\ibexa-ts-config\Cache`) and symlinks them into `vendor/ibexa/`. The project's `composer.json` and `composer.lock` are not touched. The side project reuses the `repositories` and `minimum-stability` of the checkout, and its `auth.json` when there is one, so the same credentials work as for `composer install`.
+The version is `dev-X.Y-next`, with `X.Y` taken from the bundle's `extra.branch-alias`. The packages are installed with Composer into a project of their own under the user cache directory (`$XDG_CACHE_HOME/ibexa-ts-config`, `~/.cache/ibexa-ts-config`, `~/Library/Caches/ibexa-ts-config` or `%LOCALAPPDATA%\ibexa-ts-config\Cache`) and symlinked into `vendor/ibexa/`. The bundle's `composer.json` and `composer.lock` are not touched. The side project reuses the bundle's `repositories` and its `auth.json` when there is one, so the same credentials work as for `composer install`. A package already present in `vendor/` is left alone, and a dangling symlink (for example after the cache was removed) is installed again on the next run.
 
-Only `ibexa/*` packages are accepted. A package already present in `vendor/` is left alone. A dangling symlink, for example after the cache was removed, is installed again on the next run.
-
-To refresh what is in the cache (branch constraints such as `dev-6.0-next` move on):
+To refresh the cached packages (the `-next` branches move on):
 
 ```yarn ibexa-generate-tsconfig --update-type-dependencies```
 

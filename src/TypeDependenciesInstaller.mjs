@@ -5,17 +5,19 @@ import { execSync } from 'child_process';
 
 export default class TypeDependenciesInstaller {
     static CACHE_DIR_NAME = 'ibexa-ts-config';
-    static CACHE_SUBDIR_NAME = 'type-dependencies';
-    static COMPOSER_EXTRA_KEY = 'ts-config';
-    static VENDOR_PREFIX = 'ibexa/';
+    static PACKAGES = [
+        { name: 'ibexa/admin-ui-assets', isRequired: () => true },
+        { name: 'ibexa/headless-assets', isRequired: (composerContent) => composerContent.license === 'proprietary' },
+    ];
 
     constructor({ rootDir, getIbexaVendorPath, update = false }) {
         this.rootDir = rootDir;
         this.getIbexaVendorPath = getIbexaVendorPath;
         this.update = update;
+        this.composerContent = TypeDependenciesInstaller.readJson(path.join(rootDir, 'composer.json')) ?? {};
     }
 
-    static getUserCacheDir = () => {
+    static getCacheDir = () => {
         const { XDG_CACHE_HOME, LOCALAPPDATA } = process.env;
 
         if (XDG_CACHE_HOME) {
@@ -53,96 +55,39 @@ export default class TypeDependenciesInstaller {
         }
     };
 
-    static slugify = (value) => value.replace(/[^a-zA-Z0-9.-]+/g, '_');
-
-    static runComposer = (args, cwd) => {
-        const command = `composer ${args} --no-interaction --no-progress --no-plugins --no-scripts --prefer-dist`;
+    static runComposer = (command, cwd) => {
+        const fullCommand = `composer ${command} --no-interaction --no-progress --no-plugins --no-scripts --prefer-dist`;
 
         try {
-            execSync(command, { cwd, stdio: ['ignore', 'ignore', 'pipe'] });
+            execSync(fullCommand, { cwd, stdio: ['ignore', 'ignore', 'pipe'] });
         } catch (error) {
             const stderr = error.stderr?.toString().trim();
 
-            throw new Error(`Failed to run "${command}" in "${cwd}".\n${stderr || error.message}`);
+            throw new Error(`Failed to run "${fullCommand}" in "${cwd}".\n${stderr || error.message}`);
         }
     };
 
-    getPackageVendorPath = (name) => this.getIbexaVendorPath(name.slice(TypeDependenciesInstaller.VENDOR_PREFIX.length), true);
+    getVersionLine = () => {
+        const branchAliases = Object.values(this.composerContent.extra?.['branch-alias'] ?? {});
+        const versionLine = branchAliases.map((alias) => /^(\d+\.\d+)\.x-dev$/.exec(alias)?.[1]).find(Boolean);
+
+        return versionLine ?? null;
+    };
+
+    getPackages = () =>
+        TypeDependenciesInstaller.PACKAGES.filter(
+            ({ name, isRequired }) => name !== this.composerContent.name && isRequired(this.composerContent),
+        ).map(({ name }) => name);
+
+    getVendorPath = (name) => this.getIbexaVendorPath(name.replace(/^ibexa\//, ''), true);
 
     getCacheProjectDir = (name, constraint) =>
-        path.join(
-            TypeDependenciesInstaller.getUserCacheDir(),
-            TypeDependenciesInstaller.CACHE_SUBDIR_NAME,
-            `${TypeDependenciesInstaller.slugify(name)}@${TypeDependenciesInstaller.slugify(constraint)}`,
-        );
+        path.join(TypeDependenciesInstaller.getCacheDir(), 'packages', `${name.replace('/', '_')}@${constraint}`);
 
-    isManagedLink = (filePath) => {
-        if (!TypeDependenciesInstaller.isSymlink(filePath) || !fs.existsSync(filePath)) {
-            return false;
-        }
-
-        const cacheDir = path.join(TypeDependenciesInstaller.getUserCacheDir(), TypeDependenciesInstaller.CACHE_SUBDIR_NAME);
-
-        return fs.realpathSync(filePath).startsWith(fs.realpathSync(cacheDir));
-    };
-
-    collect = () => {
-        const vendorIbexaDir = this.getIbexaVendorPath('', true);
-        const dependencies = {};
-
-        if (!fs.existsSync(vendorIbexaDir)) {
-            return dependencies;
-        }
-
-        fs.readdirSync(vendorIbexaDir).forEach((packageDirName) => {
-            const composerContent = TypeDependenciesInstaller.readJson(path.join(vendorIbexaDir, packageDirName, 'composer.json'));
-            const required = composerContent?.extra?.ibexa?.[TypeDependenciesInstaller.COMPOSER_EXTRA_KEY]?.require ?? {};
-
-            Object.entries(required).forEach(([name, constraint]) => {
-                if (!name.startsWith(TypeDependenciesInstaller.VENDOR_PREFIX)) {
-                    console.warn(
-                        '\x1b[33m%s\x1b[0m',
-                        `Type dependency "${name}" declared by "${packageDirName}" is not an ${TypeDependenciesInstaller.VENDOR_PREFIX}* package. Skipping.`,
-                    );
-
-                    return;
-                }
-
-                if (dependencies[name] && dependencies[name] !== constraint) {
-                    console.warn(
-                        '\x1b[33m%s\x1b[0m',
-                        `Type dependency "${name}" is declared as "${dependencies[name]}" and as "${constraint}" (by "${packageDirName}"). Keeping "${dependencies[name]}".`,
-                    );
-
-                    return;
-                }
-
-                dependencies[name] = constraint;
-            });
-        });
-
-        return dependencies;
-    };
-
-    writeCacheProject = (projectDir, name, constraint) => {
-        const rootComposerContent = TypeDependenciesInstaller.readJson(path.join(this.rootDir, 'composer.json')) ?? {};
-        const repositories = (rootComposerContent.repositories ?? []).filter((repository) => repository.type !== 'path');
-        const composerContent = {
-            repositories,
-            'minimum-stability': rootComposerContent['minimum-stability'] ?? 'dev',
-            'prefer-stable': true,
-            config: { 'allow-plugins': false },
-            require: { [name]: constraint },
-        };
-        const authFilePath = path.join(this.rootDir, 'auth.json');
-
-        fs.mkdirSync(projectDir, { recursive: true });
-        fs.writeFileSync(path.join(projectDir, 'composer.json'), JSON.stringify(composerContent, null, 4));
-
-        if (fs.existsSync(authFilePath)) {
-            fs.copyFileSync(authFilePath, path.join(projectDir, 'auth.json'));
-        }
-    };
+    isManagedLink = (filePath) =>
+        TypeDependenciesInstaller.isSymlink(filePath) &&
+        fs.existsSync(filePath) &&
+        fs.realpathSync(filePath).startsWith(fs.realpathSync(TypeDependenciesInstaller.getCacheDir()));
 
     install = (name, constraint) => {
         const projectDir = this.getCacheProjectDir(name, constraint);
@@ -154,15 +99,28 @@ export default class TypeDependenciesInstaller {
         }
 
         // eslint-disable-next-line no-console
-        console.log(
-            '\x1b[33m%s\x1b[0m',
-            `${isInstalled ? 'Updating' : 'Installing'} type dependency ${name} (${constraint}) in ${projectDir}...`,
+        console.log('\x1b[33m%s\x1b[0m', `${isInstalled ? 'Updating' : 'Installing'} ${name} (${constraint}) in ${projectDir}...`);
+
+        fs.mkdirSync(projectDir, { recursive: true });
+        fs.writeFileSync(
+            path.join(projectDir, 'composer.json'),
+            JSON.stringify(
+                {
+                    repositories: (this.composerContent.repositories ?? []).filter((repository) => repository.type !== 'path'),
+                    'minimum-stability': 'dev',
+                    'prefer-stable': true,
+                    config: { 'allow-plugins': false },
+                    require: { [name]: constraint },
+                },
+                null,
+                4,
+            ),
         );
 
-        this.writeCacheProject(projectDir, name, constraint);
+        const authFilePath = path.join(this.rootDir, 'auth.json');
 
-        if (!isInstalled) {
-            fs.rmSync(path.join(projectDir, 'composer.lock'), { force: true });
+        if (fs.existsSync(authFilePath)) {
+            fs.copyFileSync(authFilePath, path.join(projectDir, 'auth.json'));
         }
 
         TypeDependenciesInstaller.runComposer(isInstalled ? 'update' : 'install', projectDir);
@@ -171,7 +129,7 @@ export default class TypeDependenciesInstaller {
     };
 
     link = (name, targetDir) => {
-        const linkPath = this.getPackageVendorPath(name);
+        const linkPath = this.getVendorPath(name);
 
         if (TypeDependenciesInstaller.isSymlink(linkPath)) {
             fs.unlinkSync(linkPath);
@@ -179,23 +137,33 @@ export default class TypeDependenciesInstaller {
 
         fs.mkdirSync(path.dirname(linkPath), { recursive: true });
         fs.symlinkSync(targetDir, linkPath, 'junction');
+
+        // eslint-disable-next-line no-console
+        console.log('\x1b[32m%s\x1b[0m', `Linked ${linkPath} -> ${targetDir}`);
     };
 
     run = () => {
-        Object.entries(this.collect()).forEach(([name, constraint]) => {
-            const vendorPath = this.getPackageVendorPath(name);
-            const isPresent = fs.existsSync(vendorPath);
+        const packages = this.getPackages();
+        const versionLine = this.getVersionLine();
 
-            if (isPresent && !(this.update && this.isManagedLink(vendorPath))) {
+        if (packages.length === 0) {
+            return;
+        }
+
+        if (!versionLine) {
+            console.warn('\x1b[33m%s\x1b[0m', 'No "X.Y.x-dev" branch alias found in composer.json. Skipping the assets packages.');
+
+            return;
+        }
+
+        packages.forEach((name) => {
+            const vendorPath = this.getVendorPath(name);
+
+            if (fs.existsSync(vendorPath) && !(this.update && this.isManagedLink(vendorPath))) {
                 return;
             }
 
-            const installedDir = this.install(name, constraint);
-
-            this.link(name, installedDir);
-
-            // eslint-disable-next-line no-console
-            console.log('\x1b[32m%s\x1b[0m', `Linked ${vendorPath} -> ${installedDir}`);
+            this.link(name, this.install(name, `dev-${versionLine}-next`));
         });
     };
 }

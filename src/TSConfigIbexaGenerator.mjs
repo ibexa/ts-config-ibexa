@@ -76,31 +76,16 @@ export default class TSConfigIbexaGenerator {
     }
 
     installDependencies = () => {
-        const ibexaVendorDir = this.getIbexaVendorPath('', true);
+        if (!this.isBundleContext() || !this.isStandaloneContext()) {
+            return;
+        }
 
-        if (this.isBundleContext() && this.isStandaloneContext() && !fs.existsSync(ibexaVendorDir)) {
+        if (!fs.existsSync(this.getIbexaVendorPath('', true))) {
             // eslint-disable-next-line no-console
             console.log('\x1b[33m%s\x1b[0m', 'Installing dependencies...');
             TSConfigIbexaGenerator.runComposerCommand('composer install');
-
-            const adminUiAssetsDir = this.getIbexaVendorPath('admin-ui-assets', true);
-
-            if (!fs.existsSync(adminUiAssetsDir)) {
-            // eslint-disable-next-line no-console
-                console.log('\x1b[33m%s\x1b[0m', 'Installing admin-ui-assets...');
-                TSConfigIbexaGenerator.runComposerCommand('composer require ibexa/admin-ui-assets');
-            }
-
-            // eslint-disable-next-line no-console
-            console.log('\x1b[32m%s\x1b[0m', 'Dependencies installed successfully.');
         }
 
-        if (this.isBundleContext() && this.isStandaloneContext()) {
-            this.installTypeDependencies();
-        }
-    }
-
-    installTypeDependencies = () => {
         const installer = new TypeDependenciesInstaller({
             rootDir: this.rootDir,
             getIbexaVendorPath: this.getIbexaVendorPath,
