@@ -101,9 +101,9 @@ export default class TSConfigIbexaGenerator {
         const cacheDir = path.join(this.rootDir, 'node_modules', '.cache', 'ibexa-ts-config');
         const projectDir = path.join(cacheDir, 'assets');
         const getVendorPath = (name) => this.getIbexaVendorPath(name.replace('ibexa/', ''), true);
-        const isManaged = (vendorPath) => !fs.existsSync(vendorPath) || fs.realpathSync(vendorPath).startsWith(cacheDir);
+        const checkIsManaged = (vendorPath) => !fs.existsSync(vendorPath) || fs.realpathSync(vendorPath).startsWith(cacheDir);
         const packages = ['ibexa/admin-ui-assets', ...(composerContent.license === 'proprietary' ? ['ibexa/headless-assets'] : [])].filter(
-            (name) => name !== composerContent.name && isManaged(getVendorPath(name)),
+            (name) => name !== composerContent.name && checkIsManaged(getVendorPath(name)),
         );
 
         if (packages.length === 0) {
