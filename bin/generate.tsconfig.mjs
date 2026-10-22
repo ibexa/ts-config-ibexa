@@ -20,5 +20,10 @@ if (!TSConfigIbexaGeneratorInstance.isInComposerDirectory()) {
     process.exit(1);
 }
 
-TSConfigIbexaGeneratorInstance.installDependencies();
-TSConfigIbexaGeneratorInstance.generateTSConfigFile();
+try {
+    TSConfigIbexaGeneratorInstance.installDependencies();
+    await TSConfigIbexaGeneratorInstance.generateTSConfigFile();
+} catch (error) {
+    console.error('\x1b[31m%s\x1b[0m', `Error: ${error.message}`);
+    process.exit(1);
+}
