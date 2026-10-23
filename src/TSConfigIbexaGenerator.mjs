@@ -367,10 +367,11 @@ export default class TSConfigIbexaGenerator {
     };
 
     generateTSConfigFile = async () => {
+        const isBundleContext = this.isBundleContext();
         let configFileContent;
         let configFilePath;
 
-        if (this.isBundleContext()) {
+        if (isBundleContext) {
             if (!this.isStandaloneContext()) {
                 this.assertRootTSConfigExists();
             }
@@ -387,7 +388,7 @@ export default class TSConfigIbexaGenerator {
             `${TSConfigIbexaGenerator.GENERATED_FILE_HEADER}\n${JSON.stringify(configFileContent, null, 4)}\n`,
         );
 
-        if (!this.isBundleContext()) {
+        if (!isBundleContext) {
             this.ensureRootTSConfigShim();
         }
 
