@@ -6,7 +6,7 @@
   "main": "./tsconfig.json",
   "browser": "./tsconfig.json",
   "repository": "git://github.com/ibexa/ts-config-ibexa",
-  "license": "GPL-2.0-only",
+  "license": "GPL-2.0",
   "prettier": "@ibexa/eslint-config/prettier",
   "exports": {
     ".": "./tsconfig.json",
