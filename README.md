@@ -19,6 +19,19 @@ Creates aliases relative to current bundle directory (like `vendor/ibexa/admin-u
 #### custom
 Used with `--custom-relative-path` argument, it creates aliases relative to path from this argument
 
+## Release
+
+A release is a bump commit and a `v<version>` tag on the `X.x` branch being released:
+
+```sh
+yarn create-tag 1.1.5            # checks, bump, commit "Released 1.1.5" and tag v1.1.5 locally
+git push origin HEAD v1.1.5
+```
+
+`create-tag --dry-run` does the same from any branch without intending a push; drop the commit and the tag afterwards.
+
+The same steps run in GitHub Actions through the **Tag** workflow (`workflow_dispatch` with the version, `dry-run` on by default). The version has to be the next patch or the next minor of the latest stable tag on that major line; prereleases such as `1.1.5-alpha.1` only have to be new. Consumers pin the package by the tag (`https://github.com/ibexa/ts-config-ibexa#~v1.1.0`), so the tag is the release: nothing is published to a registry.
+
 ## COPYRIGHT
 Copyright (C) 1999-2025 Ibexa AS (formerly eZ Systems AS). All rights reserved.
 
