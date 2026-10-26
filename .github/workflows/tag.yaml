@@ -1,0 +1,70 @@
+name: Tag
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: Release version without the leading v, e.g. 1.1.5
+                type: string
+                required: true
+            dry-run:
+                description: Run everything, including the bump commit and the tag, but do not push them. Lets the workflow be exercised from any branch.
+                type: boolean
+                default: true
+
+jobs:
+    checks:
+        name: CI
+        runs-on: 'ubuntu-26.04'
+        timeout-minutes: 10
+
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: '.nvmrc'
+            - run: yarn install
+            - run: yarn test
+
+    tag:
+        name: Bump the version and push the tag
+        needs: checks
+        runs-on: 'ubuntu-26.04'
+        timeout-minutes: 10
+
+        permissions:
+            contents: write
+
+        steps:
+            # The default GITHUB_TOKEN cannot push to a stable branch or create a tag:
+            # both are restricted by the repository rulesets to the Ibexa Workflow Automation app.
+            - name: Generate GitHub App token
+              id: generate_token
+              uses: actions/create-github-app-token@v3
+              with:
+                  client-id: ${{ secrets.AUTOMATION_CLIENT_ID }}
+                  private-key: ${{ secrets.AUTOMATION_CLIENT_SECRET }}
+                  owner: ${{ github.repository_owner }}
+            - name: Resolve GitHub App user ID
+              id: app_user
+              run: echo "user-id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+              env:
+                  APP_SLUG: ${{ steps.generate_token.outputs.app-slug }}
+                  GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+                  token: ${{ steps.generate_token.outputs.token }}
+            - name: Bump, commit and tag
+              run: |
+                  git config user.name "${APP_SLUG}[bot]"
+                  git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+                  node scripts/create-tag.mjs '${{ inputs.version }}' --skip-ci ${{ inputs.dry-run && '--dry-run' || '' }}
+                  git show --stat HEAD
+              env:
+                  APP_SLUG: ${{ steps.generate_token.outputs.app-slug }}
+                  APP_USER_ID: ${{ steps.app_user.outputs.user-id }}
+            # Note: --dry-run stops before the server evaluates the repository rulesets,
+            # so it proves authentication and shows the refs but cannot surface a permission error.
+            - name: Push the branch and the tag
+              run: git push ${{ inputs.dry-run && '--dry-run' || '' }} origin "HEAD:${GITHUB_REF_NAME}" "v${{ inputs.version }}"
