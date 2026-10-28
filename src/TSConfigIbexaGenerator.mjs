@@ -292,39 +292,96 @@ export default class TSConfigIbexaGenerator {
         return TSConfigIbexaGenerator.sortConfigAliases(listUnsorted);
     };
 
-    static ASSETS_TYPES_PACKAGES = ['react', 'react-dom'];
+    static ASSETS_BUNDLES = ['admin-ui-assets', 'headless-assets'];
 
-    getAssetsTypesDir = () => this.getIbexaVendorPath('admin-ui-assets/src/bundle/Resources/public/vendors/@types');
+    static readPackageJson = (packageDir) => {
+        const packageJsonPath = path.join(packageDir, 'package.json');
 
-    getTypeRoots = () => [`./${this.getAssetsTypesDir()}`];
+        if (!fs.existsSync(packageJsonPath)) {
+            return {};
+        }
+
+        try {
+            return JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+        } catch {
+            return {};
+        }
+    };
+
+    static hasTypeDeclarations = (packageDir) => {
+        const { types, typings } = TSConfigIbexaGenerator.readPackageJson(packageDir);
+
+        return Boolean(types || typings) || fs.existsSync(path.join(packageDir, 'index.d.ts'));
+    };
+
+    static getPackageName = (packageDir) => {
+        const { name } = TSConfigIbexaGenerator.readPackageJson(packageDir);
+
+        if (name) {
+            return name;
+        }
+
+        const parentDirName = path.basename(path.dirname(packageDir));
+
+        return parentDirName.startsWith('@') ? `${parentDirName}/${path.basename(packageDir)}` : path.basename(packageDir);
+    };
+
+    static getTypesPackageName = (typesDirName) => (typesDirName.includes('__') ? `@${typesDirName.replace('__', '/')}` : typesDirName);
+
+    static listPackageDirs = (dir) => {
+        const subDirs = fs
+            .readdirSync(dir, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory())
+            .map((entry) => path.join(dir, entry.name));
+
+        return subDirs.flatMap((subDir) => (path.basename(subDir).startsWith('@') ? TSConfigIbexaGenerator.listPackageDirs(subDir) : [subDir]));
+    };
+
+    getAssetsVendorsDirs = () =>
+        TSConfigIbexaGenerator.ASSETS_BUNDLES.map((bundleName) =>
+            path.resolve(this.rootDir, this.getIbexaVendorPath(`${bundleName}/src/bundle/Resources/public/vendors`)),
+        ).filter((vendorsDir) => fs.existsSync(vendorsDir));
+
+    getTypeRoots = () =>
+        this.getAssetsVendorsDirs()
+            .map((vendorsDir) => path.join(vendorsDir, '@types'))
+            .filter((typesDir) => fs.existsSync(typesDir))
+            .map((typesDir) => this.getPath(typesDir));
 
     getAssetsTypesPaths = () => {
         const paths = {};
-        const addPath = (name, fullPath) => {
-            if (!fs.existsSync(fullPath)) {
-                console.warn('\x1b[33m%s\x1b[0m', `Types for "${name}" not found at "${fullPath}". Skipping.`);
+        const addPackage = (name, packageDir) => {
+            const packagePath = this.getPath(packageDir);
 
-                return;
-            }
-
-            const typesPath = this.getPath(fullPath);
-
-            paths[name] = [typesPath];
-            paths[`${name}/*`] = [`${typesPath}/*`];
+            paths[name] = [packagePath];
+            paths[`${name}/*`] = [`${packagePath}/*`];
         };
 
-        TSConfigIbexaGenerator.ASSETS_TYPES_PACKAGES.forEach((name) => {
-            addPath(name, path.resolve(this.rootDir, this.getAssetsTypesDir(), name));
+        this.getAssetsVendorsDirs().forEach((vendorsDir) => {
+            const packageDirs = TSConfigIbexaGenerator.listPackageDirs(vendorsDir);
+            const isTypesPackage = (packageDir) => path.basename(path.dirname(packageDir)) === '@types';
+
+            packageDirs
+                .filter(isTypesPackage)
+                .forEach((packageDir) => addPackage(TSConfigIbexaGenerator.getTypesPackageName(path.basename(packageDir)), packageDir));
+            packageDirs
+                .filter((packageDir) => !isTypesPackage(packageDir) && TSConfigIbexaGenerator.hasTypeDeclarations(packageDir))
+                .forEach((packageDir) => addPackage(TSConfigIbexaGenerator.getPackageName(packageDir), packageDir));
         });
-        addPath('csstype', path.resolve(this.rootDir, 'node_modules', 'csstype'));
+
+        const csstypeDir = path.resolve(this.rootDir, 'node_modules', 'csstype');
+
+        if (fs.existsSync(csstypeDir)) {
+            addPackage('csstype', csstypeDir);
+        }
 
         return paths;
     };
 
     getCompilerOptions = async () => ({
         paths: TSConfigIbexaGenerator.sortConfigAliases({
-            ...(await this.getEncoreAliases()),
             ...this.getAssetsTypesPaths(),
+            ...(await this.getEncoreAliases()),
         }),
         typeRoots: this.getTypeRoots(),
         types: [],
