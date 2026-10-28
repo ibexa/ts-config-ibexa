@@ -314,17 +314,7 @@ export default class TSConfigIbexaGenerator {
         return Boolean(types || typings) || fs.existsSync(path.join(packageDir, 'index.d.ts'));
     };
 
-    static getPackageName = (packageDir) => {
-        const { name } = TSConfigIbexaGenerator.readPackageJson(packageDir);
-
-        if (name) {
-            return name;
-        }
-
-        const parentDirName = path.basename(path.dirname(packageDir));
-
-        return parentDirName.startsWith('@') ? `${parentDirName}/${path.basename(packageDir)}` : path.basename(packageDir);
-    };
+    static getPackageName = (packageDir) => TSConfigIbexaGenerator.readPackageJson(packageDir).name;
 
     static getTypesPackageName = (typesDirName) => (typesDirName.includes('__') ? `@${typesDirName.replace('__', '/')}` : typesDirName);
 
@@ -366,7 +356,13 @@ export default class TSConfigIbexaGenerator {
                 .forEach((packageDir) => addPackage(TSConfigIbexaGenerator.getTypesPackageName(path.basename(packageDir)), packageDir));
             packageDirs
                 .filter((packageDir) => !isTypesPackage(packageDir) && TSConfigIbexaGenerator.hasTypeDeclarations(packageDir))
-                .forEach((packageDir) => addPackage(TSConfigIbexaGenerator.getPackageName(packageDir), packageDir));
+                .forEach((packageDir) => {
+                    const name = TSConfigIbexaGenerator.getPackageName(packageDir);
+
+                    if (name) {
+                        addPackage(name, packageDir);
+                    }
+                });
         });
 
         const csstypeDir = path.resolve(this.rootDir, 'node_modules', 'csstype');
