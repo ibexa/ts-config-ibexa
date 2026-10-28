@@ -292,51 +292,11 @@ export default class TSConfigIbexaGenerator {
         return TSConfigIbexaGenerator.sortConfigAliases(listUnsorted);
     };
 
-    static ASSETS_BUNDLES = ['admin-ui-assets', 'headless-assets'];
+    static ASSETS_VENDORS_PATTERN = '{admin-ui-assets,headless-assets}/src/bundle/Resources/public/vendors';
 
-    static readPackageJson = (packageDir) => {
-        const packageJsonPath = path.join(packageDir, 'package.json');
+    getAssetsVendorsGlob = (pattern) => globSync(this.getIbexaVendorPath(`${TSConfigIbexaGenerator.ASSETS_VENDORS_PATTERN}/${pattern}`, true)).toSorted();
 
-        if (!fs.existsSync(packageJsonPath)) {
-            return {};
-        }
-
-        try {
-            return JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        } catch {
-            return {};
-        }
-    };
-
-    static hasTypeDeclarations = (packageDir) => {
-        const { types, typings } = TSConfigIbexaGenerator.readPackageJson(packageDir);
-
-        return Boolean(types || typings) || fs.existsSync(path.join(packageDir, 'index.d.ts'));
-    };
-
-    static getPackageName = (packageDir) => TSConfigIbexaGenerator.readPackageJson(packageDir).name;
-
-    static getTypesPackageName = (typesDirName) => (typesDirName.includes('__') ? `@${typesDirName.replace('__', '/')}` : typesDirName);
-
-    static listPackageDirs = (dir) => {
-        const subDirs = fs
-            .readdirSync(dir, { withFileTypes: true })
-            .filter((entry) => entry.isDirectory())
-            .map((entry) => path.join(dir, entry.name));
-
-        return subDirs.flatMap((subDir) => (path.basename(subDir).startsWith('@') ? TSConfigIbexaGenerator.listPackageDirs(subDir) : [subDir]));
-    };
-
-    getAssetsVendorsDirs = () =>
-        TSConfigIbexaGenerator.ASSETS_BUNDLES.map((bundleName) =>
-            path.resolve(this.rootDir, this.getIbexaVendorPath(`${bundleName}/src/bundle/Resources/public/vendors`)),
-        ).filter((vendorsDir) => fs.existsSync(vendorsDir));
-
-    getTypeRoots = () =>
-        this.getAssetsVendorsDirs()
-            .map((vendorsDir) => path.join(vendorsDir, '@types'))
-            .filter((typesDir) => fs.existsSync(typesDir))
-            .map((typesDir) => this.getPath(typesDir));
+    getTypeRoots = () => this.getAssetsVendorsGlob('@types').map((typesDir) => this.getPath(typesDir));
 
     getAssetsTypesPaths = () => {
         const paths = {};
@@ -347,22 +307,16 @@ export default class TSConfigIbexaGenerator {
             paths[`${name}/*`] = [`${packagePath}/*`];
         };
 
-        this.getAssetsVendorsDirs().forEach((vendorsDir) => {
-            const packageDirs = TSConfigIbexaGenerator.listPackageDirs(vendorsDir);
-            const isTypesPackage = (packageDir) => path.basename(path.dirname(packageDir)) === '@types';
+        this.getAssetsVendorsGlob('{*,@*/*}/package.json').forEach((packageJsonPath) => {
+            const { name, types, typings } = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 
-            packageDirs
-                .filter(isTypesPackage)
-                .forEach((packageDir) => addPackage(TSConfigIbexaGenerator.getTypesPackageName(path.basename(packageDir)), packageDir));
-            packageDirs
-                .filter((packageDir) => !isTypesPackage(packageDir) && TSConfigIbexaGenerator.hasTypeDeclarations(packageDir))
-                .forEach((packageDir) => {
-                    const name = TSConfigIbexaGenerator.getPackageName(packageDir);
+            if (!name || !(types || typings)) {
+                return;
+            }
 
-                    if (name) {
-                        addPackage(name, packageDir);
-                    }
-                });
+            const importName = name.startsWith('@types/') ? name.slice('@types/'.length).replace(/^(.+)__(.+)$/, '@$1/$2') : name;
+
+            addPackage(importName, path.dirname(packageJsonPath));
         });
 
         const csstypeDir = path.resolve(this.rootDir, 'node_modules', 'csstype');
