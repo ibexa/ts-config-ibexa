@@ -292,12 +292,43 @@ export default class TSConfigIbexaGenerator {
         return TSConfigIbexaGenerator.sortConfigAliases(listUnsorted);
     };
 
-    getTypeRoots = () => {
-        return [
-            `./${this.getIbexaVendorPath('admin-ui-assets/src/bundle/Resources/public/vendors/@types')}`,
-            './node_modules/@types',
-        ]
-    }
+    static ASSETS_TYPES_PACKAGES = ['react', 'react-dom'];
+
+    getAssetsTypesDir = () => this.getIbexaVendorPath('admin-ui-assets/src/bundle/Resources/public/vendors/@types');
+
+    getTypeRoots = () => [`./${this.getAssetsTypesDir()}`];
+
+    getAssetsTypesPaths = () => {
+        const paths = {};
+        const addPath = (name, fullPath) => {
+            if (!fs.existsSync(fullPath)) {
+                console.warn('\x1b[33m%s\x1b[0m', `Types for "${name}" not found at "${fullPath}". Skipping.`);
+
+                return;
+            }
+
+            const typesPath = this.getPath(fullPath);
+
+            paths[name] = [typesPath];
+            paths[`${name}/*`] = [`${typesPath}/*`];
+        };
+
+        TSConfigIbexaGenerator.ASSETS_TYPES_PACKAGES.forEach((name) => {
+            addPath(name, path.resolve(this.rootDir, this.getAssetsTypesDir(), name));
+        });
+        addPath('csstype', path.resolve(this.rootDir, 'node_modules', 'csstype'));
+
+        return paths;
+    };
+
+    getCompilerOptions = async () => ({
+        paths: TSConfigIbexaGenerator.sortConfigAliases({
+            ...(await this.getEncoreAliases()),
+            ...this.getAssetsTypesPaths(),
+        }),
+        typeRoots: this.getTypeRoots(),
+        types: [],
+    });
 
     getGlobalTypesPath = () => this.getPath(this.getIbexaVendorPath('*/src/bundle/Resources/types/**/*.d.ts', true));
 
@@ -312,10 +343,7 @@ export default class TSConfigIbexaGenerator {
 
         if (this.isStandaloneContext()) {
             configFileContent.extends = '@ibexa/ts-config';
-            configFileContent.compilerOptions = {
-                paths: await this.getEncoreAliases(),
-                typeRoots: this.getTypeRoots(),
-            };
+            configFileContent.compilerOptions = await this.getCompilerOptions();
         } else {
             configFileContent.extends = this.getRootTSConfigPath();
         }
@@ -327,17 +355,14 @@ export default class TSConfigIbexaGenerator {
         const configFileContent = {
             extends: '@ibexa/ts-config',
             include: [
-                this.getIbexaVendorPath('**/*'),
+                this.getIbexaVendorPath('*/src/bundle/**/*'),
             ],
             exclude: [
                 this.getIbexaVendorPath('**/node_modules/**/*'),
                 this.getIbexaVendorPath('**/vendors/**/*'),
                 this.getIbexaVendorPath('**/vendor/**/*'),
             ],
-            compilerOptions: {
-                paths: await this.getEncoreAliases(),
-                typeRoots: this.getTypeRoots(),
-            },
+            compilerOptions: await this.getCompilerOptions(),
         };
 
         return configFileContent;
@@ -351,19 +376,22 @@ export default class TSConfigIbexaGenerator {
         }
     };
 
-    ensureRootTSConfigShim = () => {
-        const shimPath = path.resolve(TSConfigIbexaGenerator.TSCONFIG_FILENAME);
+    ensureRootTSConfig = () => {
+        const rootTSConfigPath = path.resolve(TSConfigIbexaGenerator.TSCONFIG_FILENAME);
 
-        if (fs.existsSync(shimPath)) {
+        if (fs.existsSync(rootTSConfigPath)) {
             return;
         }
 
-        const shimContent = { extends: `./${TSConfigIbexaGenerator.IBEXA_TSCONFIG_FILENAME}` };
+        const rootTSConfigContent = {
+            files: [],
+            references: [{ path: `./${TSConfigIbexaGenerator.IBEXA_TSCONFIG_FILENAME}` }],
+        };
 
-        fs.writeFileSync(shimPath, `${JSON.stringify(shimContent, null, 4)}\n`);
+        fs.writeFileSync(rootTSConfigPath, `${JSON.stringify(rootTSConfigContent, null, 4)}\n`);
 
         // eslint-disable-next-line no-console
-        console.log('\x1b[32m%s\x1b[0m', `Created ${shimPath} extending ${TSConfigIbexaGenerator.IBEXA_TSCONFIG_FILENAME}.`);
+        console.log('\x1b[32m%s\x1b[0m', `Created ${rootTSConfigPath} referencing ${TSConfigIbexaGenerator.IBEXA_TSCONFIG_FILENAME}.`);
     };
 
     generateTSConfigFile = async () => {
@@ -389,7 +417,7 @@ export default class TSConfigIbexaGenerator {
         );
 
         if (!isBundleContext) {
-            this.ensureRootTSConfigShim();
+            this.ensureRootTSConfig();
         }
 
         // eslint-disable-next-line no-console
