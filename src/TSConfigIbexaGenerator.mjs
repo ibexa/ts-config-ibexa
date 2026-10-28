@@ -104,7 +104,15 @@ export default class TSConfigIbexaGenerator {
         const projectDir = path.join(cacheDir, 'assets');
         const getVendorPath = (name) => this.getIbexaVendorPath(name.replace('ibexa/', ''), true);
         const checkIsManaged = (vendorPath) => !fs.existsSync(vendorPath) || fs.realpathSync(vendorPath).startsWith(cacheDir);
-        const packages = ['ibexa/admin-ui-assets', ...(composerContent.license === 'proprietary' ? ['ibexa/headless-assets'] : [])].filter(
+        const repositories = (composerContent.repositories ?? []).filter((repository) => repository.type !== 'path');
+        const hasIbexaRepository = repositories.some((repository) => repository.url?.includes('updates.ibexa.co'));
+        const isProprietary = composerContent.license === 'proprietary';
+
+        if (isProprietary && !hasIbexaRepository) {
+            console.warn('\x1b[33m%s\x1b[0m', 'No updates.ibexa.co repository in composer.json. Skipping ibexa/headless-assets.');
+        }
+
+        const packages = ['ibexa/admin-ui-assets', ...(isProprietary && hasIbexaRepository ? ['ibexa/headless-assets'] : [])].filter(
             (name) => name !== composerContent.name && checkIsManaged(getVendorPath(name)),
         );
 
@@ -112,11 +120,7 @@ export default class TSConfigIbexaGenerator {
             return;
         }
 
-        this.updateAssetsProject(
-            projectDir,
-            Object.fromEntries(packages.map((name) => [name, `dev-${versionLine}-next`])),
-            (composerContent.repositories ?? []).filter((repository) => repository.type !== 'path'),
-        );
+        this.updateAssetsProject(projectDir, Object.fromEntries(packages.map((name) => [name, `dev-${versionLine}-next`])), repositories);
 
         packages.forEach((name) => {
             fs.rmSync(getVendorPath(name), { force: true });
