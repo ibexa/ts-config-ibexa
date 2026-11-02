@@ -104,7 +104,8 @@ export default class TSConfigIbexaGenerator {
         const projectDir = path.join(cacheDir, 'assets');
         const getVendorPath = (name) => this.getIbexaVendorPath(name.replace('ibexa/', ''), true);
         const checkIsManaged = (vendorPath) => !fs.existsSync(vendorPath) || fs.realpathSync(vendorPath).startsWith(cacheDir);
-        const packages = ['ibexa/admin-ui-assets', ...(composerContent.license === 'proprietary' ? ['ibexa/headless-assets'] : [])].filter(
+        const repositories = (composerContent.repositories ?? []).filter((repository) => repository.type !== 'path');
+        const packages = this.getAssetsPackageNames(composerContent, repositories).filter(
             (name) => name !== composerContent.name && checkIsManaged(getVendorPath(name)),
         );
 
@@ -112,17 +113,31 @@ export default class TSConfigIbexaGenerator {
             return;
         }
 
-        this.updateAssetsProject(
-            projectDir,
-            Object.fromEntries(packages.map((name) => [name, `dev-${versionLine}-next`])),
-            (composerContent.repositories ?? []).filter((repository) => repository.type !== 'path'),
-        );
+        this.updateAssetsProject(projectDir, Object.fromEntries(packages.map((name) => [name, `dev-${versionLine}-next`])), repositories);
 
         packages.forEach((name) => {
             fs.rmSync(getVendorPath(name), { force: true });
             fs.symlinkSync(path.join(projectDir, 'vendor', name), getVendorPath(name), 'junction');
         });
     }
+
+    getAssetsPackageNames = (composerContent, repositories) => {
+        const packageNames = ['ibexa/admin-ui-assets'];
+
+        if (composerContent.license !== 'proprietary') {
+            return packageNames;
+        }
+
+        const hasIbexaRepository = repositories.some((repository) => repository.url?.includes('updates.ibexa.co'));
+
+        if (!hasIbexaRepository) {
+            console.warn('\x1b[33m%s\x1b[0m', 'No updates.ibexa.co repository in composer.json. Skipping ibexa/headless-assets.');
+
+            return packageNames;
+        }
+
+        return [...packageNames, 'ibexa/headless-assets'];
+    };
 
     updateAssetsProject = (projectDir, require, repositories) => {
         const authFilePath = path.join(this.rootDir, 'auth.json');
