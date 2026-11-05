@@ -343,11 +343,16 @@ export default class TSConfigIbexaGenerator {
         return paths;
     };
 
+    static mergeTypedAndEncorePaths = (typedPaths, encorePaths) => {
+        const typedBarePaths = Object.fromEntries(Object.entries(typedPaths).filter(([alias]) => !alias.endsWith('/*')));
+
+        return { ...typedPaths, ...encorePaths, ...typedBarePaths };
+    };
+
     getCompilerOptions = async () => ({
-        paths: TSConfigIbexaGenerator.sortConfigAliases({
-            ...this.getAssetsTypesPaths(),
-            ...(await this.getEncoreAliases()),
-        }),
+        paths: TSConfigIbexaGenerator.sortConfigAliases(
+            TSConfigIbexaGenerator.mergeTypedAndEncorePaths(this.getAssetsTypesPaths(), await this.getEncoreAliases()),
+        ),
         typeRoots: this.getTypeRoots(),
         types: [],
     });
