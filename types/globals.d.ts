@@ -7,8 +7,8 @@ declare global {
 
     interface Window {
         bootstrap: typeof import('bootstrap');
-        Chart: typeof import('chart.js');
-        ChartDataLabels: typeof import('chartjs-plugin-datalabels');
+        Chart: typeof import('chart.js').Chart & typeof import('chart.js') & { helpers: typeof import('chart.js/helpers') };
+        ChartDataLabels: typeof import('chartjs-plugin-datalabels').default;
         flatpickr: typeof import('flatpickr');
         ibexa: Ibexa;
         L: typeof import('leaflet');
