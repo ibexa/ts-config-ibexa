@@ -307,7 +307,9 @@ export default class TSConfigIbexaGenerator {
         return TSConfigIbexaGenerator.sortConfigAliases(listUnsorted);
     };
 
-    static ASSETS_VENDORS_PATTERN = '{admin-ui-assets,headless-assets}/src/bundle/Resources/public/vendors';
+    // Every Ibexa bundle can ship packages in its "vendors" directory: the assets packages do,
+    // and so does a bundle vendoring its own runtime (e.g. ibexa/connector-ai-assistant).
+    static ASSETS_VENDORS_PATTERN = '*/src/bundle/Resources/public/vendors';
 
     getAssetsVendorsGlob = (pattern) => globSync(this.getIbexaVendorPath(`${TSConfigIbexaGenerator.ASSETS_VENDORS_PATTERN}/${pattern}`, true)).toSorted();
 
