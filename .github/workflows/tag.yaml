@@ -38,32 +38,20 @@ jobs:
         steps:
             # The default GITHUB_TOKEN cannot push to a stable branch or create a tag:
             # both are restricted by the repository rulesets to the Ibexa Workflow Automation app.
-            - name: Generate GitHub App token
-              id: generate_token
-              uses: actions/create-github-app-token@v3
+            - name: Generate GitHub App token and configure git
+              id: bot
+              uses: ibexa/gh-workflows/actions/setup-app-git-identity@main
               with:
-                  client-id: ${{ secrets.AUTOMATION_CLIENT_ID }}
-                  private-key: ${{ secrets.AUTOMATION_CLIENT_SECRET }}
-                  owner: ${{ github.repository_owner }}
-            - name: Resolve GitHub App user ID
-              id: app_user
-              run: echo "user-id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
-              env:
-                  APP_SLUG: ${{ steps.generate_token.outputs.app-slug }}
-                  GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+                  gh-client-id: ${{ secrets.AUTOMATION_CLIENT_ID }}
+                  gh-client-secret: ${{ secrets.AUTOMATION_CLIENT_SECRET }}
             - uses: actions/checkout@v7
               with:
                   fetch-depth: 0
-                  token: ${{ steps.generate_token.outputs.token }}
+                  token: ${{ steps.bot.outputs.token }}
             - name: Bump, commit and tag
               run: |
-                  git config user.name "${APP_SLUG}[bot]"
-                  git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
                   node scripts/create-tag.mjs '${{ inputs.version }}' --skip-ci ${{ inputs.dry-run && '--dry-run' || '' }}
                   git show --stat HEAD
-              env:
-                  APP_SLUG: ${{ steps.generate_token.outputs.app-slug }}
-                  APP_USER_ID: ${{ steps.app_user.outputs.user-id }}
             # Note: --dry-run stops before the server evaluates the repository rulesets,
             # so it proves authentication and shows the refs but cannot surface a permission error.
             - name: Push the branch and the tag
