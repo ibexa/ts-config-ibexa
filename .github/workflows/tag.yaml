@@ -1,6 +1,7 @@
 name: Tag
 
 on:
+    pull_request: ~
     workflow_dispatch:
         inputs:
             version:
@@ -37,12 +38,12 @@ jobs:
     tag:
         name: Tag
         needs: checks
-        uses: ibexa/gh-workflows/.github/workflows/tag.yml@main
+        uses: ibexa/gh-workflows/.github/workflows/tag.yml@tag-workflow
         with:
-            version: ${{ inputs.version }}
-            dry-run: ${{ inputs.dry-run }}
-            allow-empty-release: ${{ inputs.allow-empty-release }}
-            skip-sequence-check: ${{ inputs.skip-sequence-check }}
+            version: ${{ inputs.version || '1.1.6' }}
+            dry-run: ${{ github.event_name != 'workflow_dispatch' || inputs.dry-run }}
+            allow-empty-release: ${{ inputs.allow-empty-release || false }}
+            skip-sequence-check: ${{ inputs.skip-sequence-check || false }}
             release-branches: major.x
             bump-command: >-
                 sed --in-place --regexp-extended "s/^(\s*\"version\":\s*)\"[^\"]*\"/\1\"${VERSION}\"/" package.json
