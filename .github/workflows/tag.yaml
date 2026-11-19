@@ -4,13 +4,21 @@ on:
     workflow_dispatch:
         inputs:
             version:
-                description: Release version without the leading v, e.g. 1.1.5
+                description: Release version without the leading v, e.g. 1.1.6
                 type: string
                 required: true
             dry-run:
                 description: Run everything, including the bump commit and the tag, but do not push them. Lets the workflow be exercised from any branch.
                 type: boolean
                 default: true
+            allow-empty-release:
+                description: Release a commit that already carries a version tag
+                type: boolean
+                default: false
+            skip-sequence-check:
+                description: Release a version that does not follow the latest tag
+                type: boolean
+                default: false
 
 jobs:
     checks:
@@ -27,32 +35,18 @@ jobs:
             - run: yarn test
 
     tag:
-        name: Bump the version and push the tag
+        name: Tag
         needs: checks
-        runs-on: 'ubuntu-26.04'
-        timeout-minutes: 10
-
-        permissions:
-            contents: write
-
-        steps:
-            # The default GITHUB_TOKEN cannot push to a stable branch or create a tag:
-            # both are restricted by the repository rulesets to the Ibexa Workflow Automation app.
-            - name: Generate GitHub App token and configure git
-              id: bot
-              uses: ibexa/gh-workflows/actions/setup-app-git-identity@main
-              with:
-                  gh-client-id: ${{ secrets.AUTOMATION_CLIENT_ID }}
-                  gh-client-secret: ${{ secrets.AUTOMATION_CLIENT_SECRET }}
-            - uses: actions/checkout@v7
-              with:
-                  fetch-depth: 0
-                  token: ${{ steps.bot.outputs.token }}
-            - name: Bump, commit and tag
-              run: |
-                  node scripts/create-tag.mjs '${{ inputs.version }}' --skip-ci ${{ inputs.dry-run && '--dry-run' || '' }}
-                  git show --stat HEAD
-            # Note: --dry-run stops before the server evaluates the repository rulesets,
-            # so it proves authentication and shows the refs but cannot surface a permission error.
-            - name: Push the branch and the tag
-              run: git push ${{ inputs.dry-run && '--dry-run' || '' }} origin "HEAD:${GITHUB_REF_NAME}" "v${{ inputs.version }}"
+        uses: ibexa/gh-workflows/.github/workflows/tag.yml@main
+        with:
+            version: ${{ inputs.version }}
+            dry-run: ${{ inputs.dry-run }}
+            allow-empty-release: ${{ inputs.allow-empty-release }}
+            skip-sequence-check: ${{ inputs.skip-sequence-check }}
+            release-branches: major.x
+            bump-command: >-
+                sed --in-place --regexp-extended "s/^(\s*\"version\":\s*)\"[^\"]*\"/\1\"${VERSION}\"/" package.json
+            version-file: package.json
+        secrets:
+            AUTOMATION_CLIENT_ID: ${{ secrets.AUTOMATION_CLIENT_ID }}
+            AUTOMATION_CLIENT_SECRET: ${{ secrets.AUTOMATION_CLIENT_SECRET }}

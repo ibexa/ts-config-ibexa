@@ -21,16 +21,11 @@ Used with `--custom-relative-path` argument, it creates aliases relative to path
 
 ## Release
 
-A release is a bump commit and a `v<version>` tag on the `X.x` branch being released:
+A release is a `v<version>` tag on the `X.x` branch being released, together with a commit setting that version in `package.json`. Consumers pin the package by the tag (`https://github.com/ibexa/ts-config-ibexa#~v1.1.0`), so the tag is the release: nothing is published to a registry.
 
-```sh
-yarn create-tag 1.1.5            # checks, bump, commit "Released 1.1.5" and tag v1.1.5 locally
-git push origin HEAD v1.1.5
-```
+Releases are made with the **Tag** workflow in GitHub Actions: choose the `X.x` branch, give the version without the leading `v` and clear `dry-run`. With `dry-run` (the default) everything runs, from any branch, but nothing is pushed.
 
-`create-tag --dry-run` does the same from any branch without intending a push; drop the commit and the tag afterwards.
-
-The same steps run in GitHub Actions through the **Tag** workflow (`workflow_dispatch` with the version, `dry-run` on by default). The version has to be the next patch or the next minor of the latest stable tag on that major line; prereleases such as `1.1.5-alpha.1` only have to be new. Consumers pin the package by the tag (`https://github.com/ibexa/ts-config-ibexa#~v1.1.0`), so the tag is the release: nothing is published to a registry.
+The version has to be the next patch or the next minor of the latest stable tag on that major line, or a prerelease of one of them such as `1.2.0-alpha.1`. `skip-sequence-check` lifts that rule for a deliberate exception, and `allow-empty-release` allows tagging a commit that is already released. The rules are those of [`validate-release-version`](https://github.com/ibexa/gh-workflows/blob/main/docs/README.md#validate-release-version).
 
 ## COPYRIGHT
 Copyright (C) 1999-2025 Ibexa AS (formerly eZ Systems AS). All rights reserved.
